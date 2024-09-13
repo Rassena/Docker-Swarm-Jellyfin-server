@@ -1,0 +1,106 @@
+version: "3.6"
+services:
+  tdarr:
+    image: ghcr.io/haveagitgat/tdarr:latest
+    ports:
+      - ${TDARR_WEB_PORT}:8265 # webUI port
+      - ${TDARR_SERVER_PORT}:8266 # server port
+    environment:
+      - TZ=${TZ}
+      - PUID=1000
+      - PGID=1000
+      - UMASK_SET=002
+      - serverIP=0.0.0.0
+      - serverPort=8266
+      - webUIPort=8265
+      - internalNode=false
+      - inContainer=true
+      - ffmpegVersion=6
+      - nodeName="{{.Node.Hostname}}-Internal"
+      # - NVIDIA_DRIVER_CAPABILITIES=all
+      # - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ${TDARR_CONFIG}:/app/configs
+      - ${TDARR_LOGS}:/app/logs
+      - ${TDARR_CACHE}:/temp
+      - ${TDARR_SERVER}:/app/server
+      - ${LOCAL_RADARR}:${REMOTE_RADARR}
+      - ${LOCAL_SONARR}:${REMOTE_SONARR}
+      - /media/server/media/german:/media/server/media/german
+    networks:
+      tdarr:
+    deploy:
+      restart_policy:
+        condition: any
+      # resources:
+      #   limits:
+      #     cpus: "0.5"
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+          # - node.labels.role == tdarr
+          - node.labels.name == msi
+
+    # devices:
+    #   - /dev/dri:/dev/dri
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #       - driver: nvidia
+    #         count: all
+    #         capabilities: [gpu]
+    
+
+# node example
+  tdarr-node:
+    image: ghcr.io/haveagitgat/tdarr_node:latest
+    environment:
+      - TZ=${TZ}
+      - PUID=1000
+      - PGID=1000
+      - UMASK_SET=002
+      - nodeName="{{.Node.Hostname}}"
+      - serverIP=tdarr
+      - serverPort=${TDARR_SERVER_PORT}
+      - inContainer=true
+      - ffmpegVersion=6
+      # - NVIDIA_DRIVER_CAPABILITIES=all
+      # - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ${TDARR_CONFIG}:/app/configs
+      - ${TDARR_LOGS}:/app/logs
+      - ${TDARR_CACHE}:/temp
+      - ${LOCAL_RADARR}:${REMOTE_RADARR}
+      - ${LOCAL_SONARR}:${REMOTE_SONARR}
+      - /media/server/media/german:/media/server/media/german
+    networks:
+      tdarr:
+    deploy:
+      restart_policy:
+        condition: any
+      # resources:
+      #   limits:
+      #     cpus: "0.5"
+      mode: global
+      placement:
+        constraints: 
+          - node.labels.role == tdarr
+          - node.labels.name !=msi
+
+
+    # devices:
+    #   - /dev/dri:/dev/dri
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #       - driver: nvidia
+    #         count: all
+    #         capabilities: [gpu]
+
+networks:
+  tdarr:
+    driver: overlay
+    attachable: true

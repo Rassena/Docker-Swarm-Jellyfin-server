@@ -1,0 +1,43 @@
+version: '3.6'
+services:
+  openVPN_amd64:
+    cap_add:
+      - NET_ADMIN
+    image: kylemanna/openvpn:latest
+    ports:
+      - "1194:1194/udp"
+    volumes:
+      - ./openVPN_amd64/openvpn-data/conf:/etc/openvpn
+    networks: 
+      - openVPN
+    deploy:
+      restart_policy:
+        condition: any
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+        - node.labels.cpu == amd64
+
+  # openVPN_arm64:
+  #   cap_add:
+  #     - NET_ADMIN
+  #   image: darathor/openvpn:latest
+  #   ports:
+  #     - "1195:1194/udp"
+  #   volumes:
+  #     - ./openVPN_arm64/openvpn-data/conf:/etc/openvpn
+  #   networks: 
+  #     - openVPN
+  #   deploy:
+  #     restart_policy:
+  #       condition: any
+  #     mode: replicated
+  #     replicas: 1
+  #     placement:
+  #       constraints: 
+  #       - node.labels.cpu == arm64
+
+networks:
+  openVPN:
+    external: true

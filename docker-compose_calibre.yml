@@ -1,0 +1,56 @@
+version: '3.6'
+services:
+  calibre:
+    image: linuxserver/calibre:7.4.0
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+    volumes:
+      - ${CALIBRE_CONFIG}:/config
+      - ${LOCAL_READERR}:${REMOTE_READERR}
+    ports:
+      - ${CALIBRE_DESKTOP_GUI}:8080
+      - ${CALIBRE_DESKTOP_GUI_HTTPS}:8181
+      - ${CALIBRE_WEBSERVER_GUI}:8081
+    hostname: calibre
+    networks:
+      calibre:
+    deploy:
+      restart_policy:
+        condition: any
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+        - node.labels.cpu == medium
+
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+      - DOCKER_MODS=linuxserver/mods:universal-calibre #optional
+    volumes:
+      - ${CALIBRE_WEB_CONFIG}:/config
+      - ${CALIBRE_LIBRARY}:/Books
+      - ${LOCAL_READERR}:${REMOTE_READERR}
+    ports:
+      - ${CALIBRE_WEB_PORT}:8083
+    hostname: calibre-web
+    networks:
+      calibre:
+    deploy:
+      restart_policy:
+        condition: any
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+        - node.labels.cpu == medium
+
+networks:
+  calibre:
+    driver: overlay
+    attachable: true

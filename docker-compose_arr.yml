@@ -1,0 +1,196 @@
+version: '3.6'
+services:
+
+  sonarr:
+    image: ghcr.io/hotio/sonarr:latest
+    ports:
+      - "${SONARR_WEB_PORT}:8989"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      - TZ=${TZ}
+    volumes:
+      - ${SONARR_CONFIG}:/config
+      - ${SONARR_BACKUP}:${SONARR_BACKUP}
+
+      - ${QBITTORRENT_DOWNLOADS}:${QBITTORRENT_DOWNLOADS}
+      - ${QBITTORRENT_IMPORTED}:${QBITTORRENT_IMPORTED}
+
+      - ${LOCAL_SONARR}:${REMOTE_SONARR}
+      - ${SONARR_RECYCLEBIN}:${SONARR_RECYCLEBIN}
+
+    hostname: sonarr
+    networks:
+      arr:
+    deploy:
+      restart_policy:
+        condition: any
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+        - node.labels.cpu == amd64
+
+  radarr:
+    image: ghcr.io/hotio/radarr:latest
+    ports:
+      - "${RADARR_WEB_PORT}:7878"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      - TZ=${TZ}
+    volumes:
+      - ${RADARR_CONFIG}:/config
+      - ${RADARR_BACKUP}:${RADARR_BACKUP}
+
+      - ${QBITTORRENT_DOWNLOADS}:${QBITTORRENT_DOWNLOADS}
+      - ${QBITTORRENT_IMPORTED}:${QBITTORRENT_IMPORTED}
+
+      - ${LOCAL_RADARR}:${REMOTE_RADARR}
+      - ${RADARR_RECYCLEBIN}:${RADARR_RECYCLEBIN}
+
+    hostname: radarr
+    networks:
+      arr:
+    deploy:
+      restart_policy:
+        condition: any
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+        - node.labels.cpu == amd64
+
+  readarr:
+    image: ghcr.io/hotio/readarr:latest
+    ports:
+      - "${READARR_WEB_PORT}:8787"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      - TZ=${TZ}
+    volumes:
+      - ${READARR_CONFIG}:/config
+      - ${RADARR_BACKUP}:${RADARR_BACKUP}
+
+      - ${QBITTORRENT_DOWNLOADS}:${QBITTORRENT_DOWNLOADS}
+      - ${QBITTORRENT_IMPORTED}:${QBITTORRENT_IMPORTED}
+
+      - ${LOCAL_READERR}:${REMOTE_READERR}
+      - ${READARR_RECYCLEBIN}:${READARR_RECYCLEBIN}
+
+    hostname: readarr
+    networks:
+      arr:
+    deploy:
+      restart_policy:
+        condition: any
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+        - node.labels.cpu == amd64
+
+
+
+  qbittorrent:
+    image: ghcr.io/hotio/qbittorrent:release-ed3d519
+    ports:
+      - "${QBITTORRENT_WEB_PORT}:8080"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      - TZ=${TZ}
+    volumes:
+      - ${QBITTORRENT_CONFIG}:/config
+      - ${QBITTORRENT_DOWNLOADS}:${QBITTORRENT_DOWNLOADS}
+      # - ${QBITTORRENT_IMPORTED}:/app/qBittorrent/downloads
+      - ${QBITTORRENT_BACKUP}:${QBITTORRENT_BACKUP}
+    networks:
+      arr:
+    hostname: qbittorrent
+    deploy:
+      restart_policy:
+        condition: any
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+        - node.labels.cpu == amd64
+
+
+  jackett:
+    image: ghcr.io/hotio/jackett:latest
+    ports:
+      - "${JACKETT_PORT}:9117"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      - TZ=${TZ}
+    volumes:
+      - ${JACKETT_CONFIG}:/config
+      - ${JACKETT_BACKUP}:${JACKETT_BACKUP}
+    hostname: jackett
+    networks:
+      arr:
+      controll:
+    deploy:
+      restart_policy:
+        condition: any
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+        - node.labels.cpu == arm64
+
+  tor-privoxy:
+    image: dockage/tor-privoxy:latest
+    ports:
+      - "${TOR_PROXY_PORT}:9050" # Tor proxy
+      - "${TOR_CONTROL_PORT}:9051" # Tor control port
+      - "${TOR_PRIVOXY_PORT}:8118" # Privoxy
+    hostname: tor-privoxy
+    networks:
+      controll:
+    deploy:
+      restart_policy:
+        condition: any
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+        - node.labels.cpu == arm64
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    environment:
+      - LOG_LEVEL=info
+      - LOG_HTML=false
+      - CAPTCHA_SOLVER=none
+      - TZ=${TZ}
+    ports:
+      - "${FLARESOLVERR_PORT}:8191"
+    hostname: flaresolverr
+    networks:
+      controll:
+    deploy:
+      restart_policy:
+        condition: any
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+        - node.labels.cpu == arm64
+
+networks:
+  arr:
+    driver: overlay
+    attachable: true
+  controll:
+    driver: overlay
+    attachable: true

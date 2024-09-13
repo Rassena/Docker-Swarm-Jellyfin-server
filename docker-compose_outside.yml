@@ -1,0 +1,155 @@
+version: '3.6'
+services:
+
+  # jellyfin:
+  #   image: ghcr.io/hotio/jellyfin:latest
+  #   ports:
+  #     - "${JELLYFIN_WEB_PORT}:8096"
+  #     - "8920:8920"
+  #     - "7359:7359"
+  #     #- "1900:1900"
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - UMASK=002
+  #     - TZ=${TZ}
+  #   volumes:
+  #     - ${JELLYFIN_CONFIG}:/config
+  #     - ${JELLYFIN_CACHE_DATA}:${JELLYFIN_CACHE_DATA}
+
+  #     - ${LOCAL_RADARR}:${REMOTE_RADARR}
+  #     - ${LOCAL_SONARR}:${REMOTE_SONARR}
+
+  #     - ${JELLYFIN_BACKUP}:/media/server/backup
+  #   networks:
+  #     outside:
+  #   deploy:
+  #     restart_policy:
+  #       condition: any
+  #     mode: replicated
+  #     replicas: 1
+  #     placement:
+  #       constraints: 
+  #       - node.labels.cpu == amd64
+
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    volumes:
+      - ${JELLYFIN_CONFIG}:/config
+      - ${JELLYFIN_CACHE_DATA}:/cache
+      - ${JELLYFIN_BACKUP}:${JELLYFIN_BACKUP}
+
+      - ${LOCAL_RADARR}:${REMOTE_RADARR}
+      - ${LOCAL_SONARR}:${REMOTE_SONARR}
+      - /media/server/media/german:/media/server/media/german
+    ports:
+      - "${JELLYFIN_WEB_PORT}:8096"
+    networks:
+      outside:
+    environment:
+      - TZ=${TZ}
+    deploy:
+      restart_policy:
+        condition: any
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+        - node.labels.role == jellyfin
+
+  jellyseerr:
+    image: ghcr.io/hotio/jellyseerr:latest
+    ports:
+      - "${JELLYSEERR_WEB_PORT}:5055"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      - TZ=${TZ}
+    volumes:
+      - ${JELLYSEERR_CONFIG}:/config
+      
+      - ${LOCAL_RADARR}:${REMOTE_RADARR}
+      - ${LOCAL_SONARR}:${REMOTE_SONARR}
+      
+    networks:
+      outside:
+    deploy:
+      restart_policy:
+        condition: any
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+        - node.labels.cpu == amd64
+
+  pihole:
+    image: pihole/pihole:latest
+    ports:
+      - "${PIHOLE_DNS_PORT}:53"
+      - "${PIHOLE_WEB_PORT}:80"
+    environment:
+      TZ: ${TZ}
+      WEBPASSWORD: ${PIHOLE_PASSWORD}
+      PIHOLE_DNS_: ${PIHOLE_DNS_IP}
+    volumes:
+      - ${PIHOLE_ETC}:/etc/pihole
+      - ${PIHOLE_DNSMASQ}:/etc/dnsmasq.d
+    hostname: pihole
+    networks:
+      controll:
+      outside:
+    deploy:
+      restart_policy:
+        condition: any
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+        - node.labels.cpu == arm64
+
+  cloudflare-ddns:
+    image: oznu/cloudflare-ddns:latest
+    environment:
+      - API_KEY=${CLOUDFLARE_DDNS_API_KEY}
+      - ZONE=${CLOUDFLARE_ZONE}
+      - PROXIED=true
+      - PUID=1000
+      - PGID=1000
+    hostname: cloudflare-ddns
+    networks:
+      controll:
+    deploy:
+      restart_policy:
+        condition: any
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+        - node.labels.cpu == arm64
+
+  nginx:
+    image: nginx:latest
+    ports:
+    - "80:80"
+    # - "443:443"
+    volumes:
+    - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      outside:
+    deploy:
+      restart_policy:
+        condition: any
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: 
+        - node.labels.cpu == arm64
+
+networks:
+  controll:
+    driver: overlay
+    attachable: true
+  outside:
+    driver: overlay
+    attachable: true
